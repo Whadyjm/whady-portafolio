@@ -42,4 +42,11 @@ Los proyectos aceptan `url` (botón "Ver proyecto en vivo").
 
 ## Publicar
 
-`vite.config.js` usa `base: './'`, así que el contenido de `dist/` funciona en GitHub Pages, Netlify o Vercel sin cambios.
+El sitio está desplegado en **https://whady.dev** con Cloudflare Workers (assets estáticos). La configuración está en `wrangler.jsonc`.
+
+```bash
+npx wrangler login   # una sola vez
+npm run deploy       # compila y publica en whady.dev
+```
+
+`vite.config.js` usa `base: './'`, así que `dist/` también funciona en GitHub Pages, Netlify o Vercel.

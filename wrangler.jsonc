@@ -1,0 +1,12 @@
+{
+  // Despliegue en Cloudflare Workers (static assets): sirve el contenido de dist/ en whady.dev
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "whady-portafolio",
+  "account_id": "8efd078a6b471553aa1e236b9bd746ae",
+  "compatibility_date": "2025-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [{ "pattern": "whady.dev", "custom_domain": true }]
+}
