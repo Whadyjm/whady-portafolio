@@ -54,6 +54,8 @@ export const raw = {
         "Landing complete. When I'm not coding, you'll find me out in the countryside — livestock farming and agriculture are my other passions."
       ),
       photo: L('Foto:', 'Photo:'),
+      photoAlt: L('Foto de Whady Martínez', 'Photo of Whady Martínez'),
+      earth: L('Tierra:', 'Earth:'),
     },
     altimeter: {
       label: L('Altitud', 'Altitude'),
@@ -75,7 +77,6 @@ export const raw = {
   profile: {
     name: 'Whady Martínez',
     location: 'Valencia, Venezuela',
-    tag: L('Valencia, Venezuela · Desarrollador Mobile & IA', 'Valencia, Venezuela · Mobile & AI Developer'),
     email: 'martinez.whady@gmail.com',
     linkedin: 'https://www.linkedin.com/in/whady-mart%C3%ADnez-249b26300/',
     github: 'https://github.com/Whadyjm',
@@ -103,10 +104,6 @@ export const raw = {
       L(
         'Mi base es Flutter y Dart para diseñar arquitecturas móviles escalables, complementada con el ecosistema React (React Native, React.js, Next.js) y un backend sólido con Nest.js, Spring Boot, Python y Supabase.',
         'My foundation is Flutter and Dart for scalable mobile architectures, complemented by the React ecosystem (React Native, React.js, Next.js) and a solid backend with Nest.js, Spring Boot, Python and Supabase.'
-      ),
-      L(
-        'Me apasiona llevar la IA del demo a producción: agentes que ejecutan tareas, asistentes conversacionales y sistemas de visión por computador que generan métricas en tiempo real.',
-        'I love taking AI from demo to production: agents that carry out tasks, conversational assistants and computer-vision systems that produce real-time metrics.'
       ),
     ],
     facts: [
@@ -326,7 +323,10 @@ export const raw = {
     // span: columnas que ocupa en la cuadrícula bento de 6 columnas
     {
       title: L('Oli — Pagos para agentes', 'Oli — Payments for agents'),
-      badge: L('Hackathon 30X · Reto Blinka', 'Hackathon 30X · Blinka challenge'),
+      badgeLogo: 'brands/30x.webp',
+      badge: L('Hackathon · Reto Blinka', 'Hackathon · Blinka challenge'),
+      theme: 'oli',
+      finalist: L('Finalista del reto', 'Challenge finalist'),
       body: L(
         'Infraestructura de pagos para agentes de IA. Oli actúa como guardián financiero: lee la factura original, la contrasta con el proveedor, el acuerdo y el presupuesto, aplica el mandato de la empresa y decide aprobar, escalar a una persona o bloquear — cada decisión con su porqué y su rastro.',
         "Payments infrastructure for AI agents. Oli acts as a financial guardian: it reads the original invoice, checks it against the vendor, the agreement and the budget, applies the company's mandate and decides to approve, escalate to a person or block — every decision with its reason and its trail."

@@ -297,10 +297,6 @@ export default function App() {
         <section className="hero" id="inicio">
           <div className="hero__glow" aria-hidden="true" />
           <div className="hero__content">
-            <span className="tag intro" style={{ '--delay': '250ms' }}>
-              <span className="tag__dot" />
-              {p.tag}
-            </span>
             <h1 className="display">
               <SplitLetters text={p.name} />
             </h1>
@@ -419,7 +415,7 @@ export default function App() {
                 <Card
                   key={pr.url || pr.title}
                   as="article"
-                  className={`project ${pr.span >= 4 ? 'project--wide' : ''} ${pr.span === 6 ? 'project--feature' : ''}`}
+                  className={`project ${pr.span >= 4 ? 'project--wide' : ''} ${pr.span === 6 ? 'project--feature' : ''} ${pr.theme ? `project--${pr.theme}` : ''}`}
                   wrapClass={`span-${pr.span}`}
                   revealDelay={(i % 3) * 90}
                 >
@@ -427,11 +423,19 @@ export default function App() {
                   <div className="project__body">
                     {pr.badge ? (
                       <span className="badge">
-                        <span className="badge__dot" />
+                        {pr.badgeLogo ? <img className="badge__logo" src={pr.badgeLogo} alt="30X" width="58" height="20" decoding="async" /> : <span className="badge__dot" />}
                         {pr.badge}
                       </span>
                     ) : (
                       <span className="project__place">{pr.place}</span>
+                    )}
+                    {pr.finalist && (
+                      <span className="finalist">
+                        <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
+                          <path d="M8 1l2.1 4.3 4.7.7-3.4 3.3.8 4.7L8 11.8 3.8 14l.8-4.7L1.2 6l4.7-.7z" />
+                        </svg>
+                        {pr.finalist}
+                      </span>
                     )}
                     <h3 className={pr.span === 6 && pr.badge ? 'h-md' : 'h-sm'}>{pr.title}</h3>
                     <p>{pr.body}</p>
@@ -452,7 +456,7 @@ export default function App() {
                     )}
                     <Chips items={pr.tags} />
                     {pr.url && (
-                      <a href={pr.url} target="_blank" rel="noreferrer" className="btn btn--ghost project__link">
+                      <a href={pr.url} target="_blank" rel="noreferrer" className={`btn project__link ${pr.theme === 'oli' ? 'btn--lime' : 'btn--ghost'}`}>
                         {c.ui.live} <Arrow />
                       </a>
                     )}
@@ -509,16 +513,24 @@ export default function App() {
         </div>
         <div className="footer__bar">
           <div className="container footer__inner">
-            <div className="footer__brand">
-              <span>Whady Martínez</span>
+            <img className="footer__photo" src="perfil.webp" alt={c.ui.footer.photoAlt} width="300" height="371" loading="lazy" decoding="async" />
+            <div className="footer__about">
+              <div className="footer__brand">
+                <span>Whady Martínez</span>
+              </div>
+              <p className="footer__note">{c.ui.footer.note}</p>
             </div>
-            <p className="footer__note">{c.ui.footer.note}</p>
             <p className="footer__legal">
               © {new Date().getFullYear()} Whady Martínez · Valencia, Venezuela
               <span className="footer__credit">
                 {c.ui.footer.photo}{' '}
                 <a href="https://unsplash.com/photos/three-cows-grazing-on-a-grassy-hill-with-a-mountain-in-the-background-qM2BQ05CVLE" target="_blank" rel="noreferrer">
                   Wolfgang Hasselmann / Unsplash
+                </a>
+                {' · '}
+                {c.ui.footer.earth}{' '}
+                <a href="https://visibleearth.nasa.gov/collection/1484/blue-marble" target="_blank" rel="noreferrer">
+                  NASA Visible Earth
                 </a>
               </span>
             </p>

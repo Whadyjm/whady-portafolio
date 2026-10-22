@@ -16,7 +16,7 @@ npm run preview  # sirve /dist localmente
 
 - `src/content.js` — **todo el contenido en español e inglés**. Cada texto es `L('español', 'english')`. Edita aquí los textos.
 - `src/i18n.jsx` — idioma activo (ES/EN): se recuerda en `localStorage` y, sin preferencia guardada, sigue el idioma del navegador.
-- `src/components/Sky.jsx` — capa fija del cielo: gradientes atmosféricos, estrellas (canvas), planeta, nubes (`clouds.js`, WebGL con calidad adaptativa) y altímetro.
+- `src/components/Sky.jsx` — capa fija del cielo: gradientes atmosféricos, estrellas (canvas), planeta, nubes (`clouds.js`, WebGL con calidad adaptativa), la Tierra con texturas de la NASA (`earth.js`, WebGL; texturas en `public/earth/`), satélite en 3D (`satellite3d.js`, WebGL propio) y altímetro.
 - `src/components/AppsShowcase.jsx` — vitrina de apps; `AppScreens.jsx` recrea en código las pantallas de HerDex y Clock.Do.
 - `src/components/Visuals.jsx` — mini-ilustraciones animadas de los proyectos; la de Oli usa la mascota real de `src/oli/`.
 - `src/oli/` — mascota Oli (esfera de partículas en Canvas 2D, con su propio README y pruebas: `node --test src/oli/test/*.test.js`).

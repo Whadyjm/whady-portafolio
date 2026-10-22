@@ -106,7 +106,7 @@ ol {
 .display {
   font-family: var(--font-display);
   font-weight: 480;
-  font-size: clamp(44px, 8vw, 88px);
+  font-size: clamp(38px, 5.4vw, 64px);
   line-height: 1.04;
   letter-spacing: -0.01em;
   color: var(--color-pure-white);
@@ -174,7 +174,7 @@ ol {
   z-index: -2;
   border-radius: 48px;
   /* azul marino, no negro: se funde con el cielo en vez de verse como una mancha */
-  background: rgba(12, 28, 72, 0.72);
+  background: rgba(12, 28, 72, 0.78);
   filter: blur(24px);
   pointer-events: none;
 }
@@ -346,6 +346,47 @@ ol {
   inset: 0;
 }
 
+/* el satélite (canvas WebGL) lo posiciona Sky.jsx cada frame; se dibuja a 280×154 y se reduce con scale */
+.sky__sat {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 280px;
+  height: 154px;
+  margin: -77px 0 0 -140px;
+  visibility: hidden;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.sky__sat canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Tierra texturizada (WebGL): cubre el viewport; el disco CSS de abajo aporta el resplandor exterior */
+.sky__earth {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  will-change: opacity;
+}
+
+.sky__planet.is-textured {
+  background: transparent;
+  box-shadow:
+    0 0 40px 6px rgba(110, 160, 255, 0.4),
+    0 0 140px 40px rgba(70, 110, 230, 0.2),
+    0 0 320px 120px rgba(50, 80, 200, 0.1);
+}
+
+.sky__planet.is-textured::after {
+  display: none;
+}
+
 .sky__planet {
   position: absolute;
   left: 50%;
@@ -499,7 +540,7 @@ main {
 .section__head .lead,
 .section__head .kicker,
 .split--center .lead {
-  color: rgba(237, 237, 243, 0.86);
+  color: var(--color-ivory-text);
 }
 
 .split {
@@ -565,27 +606,6 @@ main {
   flex-direction: column;
   align-items: center;
   gap: 20px;
-}
-
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 32px;
-  padding: 0 14px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--hairline);
-  background: rgba(30, 30, 42, 0.4);
-  font-size: 13px;
-  color: var(--color-ash-text);
-}
-
-.tag__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-ivory-text);
-  box-shadow: 0 0 0 4px rgba(237, 237, 243, 0.12);
 }
 
 .hero__role {
@@ -657,6 +677,13 @@ main {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-ash-text);
+}
+
+/* "Desliza para descender" cae sobre la Tierra (clara): una píldora oscura asegura el contraste */
+.scroll-hint > span:first-child {
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  background: rgba(6, 9, 24, 0.66);
 }
 
 .scroll-hint__line {
@@ -964,10 +991,26 @@ main {
 .footer__inner {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 16px 48px;
-  padding-top: 24px;
+  gap: 16px 32px;
+  padding-top: 32px;
   padding-bottom: 32px;
-  align-items: start;
+  align-items: center;
+}
+
+/* foto sin marco: esquinas del sistema (12px), sin aro ni sombra */
+.footer__photo {
+  display: block;
+  width: 120px;
+  height: auto;
+  aspect-ratio: 300 / 371;
+  object-fit: cover;
+  border-radius: var(--radius-card);
+}
+
+.footer__about {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .footer__brand {
@@ -1062,18 +1105,14 @@ main {
   display: inline-block;
   opacity: 0;
   transform: translateY(0.5em) scale(0.4) rotate(-12deg);
-  filter: blur(14px);
   animation: charIn 1.2s var(--ease-out) forwards;
+  will-change: transform, opacity;
 }
 
 @keyframes charIn {
-  55% {
-    filter: blur(0);
-  }
   to {
     opacity: 1;
     transform: none;
-    filter: none;
   }
 }
 
@@ -2454,8 +2493,19 @@ main {
   background: rgba(237, 237, 243, 0.1);
 }
 
+/* una sola línea mientras quepa: la palabra rotativa cambia de ancho y no debe partir la frase.
+   Donde no cabe (móvil) se reservan siempre dos líneas, así el alto nunca cambia al rotar. */
 .hero__role {
-  text-wrap: balance;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .hero__role {
+    white-space: normal;
+    text-wrap: balance;
+    min-height: 2.5em;
+    font-size: clamp(20px, 5.6vw, 26px);
+  }
 }
 
 .visual {
@@ -2463,6 +2513,111 @@ main {
 }
 
 /* Oli: el SVG dibuja la factura y las decisiones; la esfera de partículas se superpone en el centro del diagrama */
+/* ───────── Tarjeta de Oli: paleta de la landing de Oli (oliva oscuro, salvia, lima) ───────── */
+.card.project--oli {
+  --oli-bg: #1b1e18;
+  --oli-paper: #242820;
+  --oli-soft: #292e23;
+  --oli-line: #404638;
+  --oli-ink: #f1f2e9;
+  --oli-muted: #b2b8a8;
+  --oli-lime: #e4f222;
+  --oli-on-lime: #20251d;
+  --oli-sage: #edf1d9;
+  background: var(--oli-bg);
+  box-shadow: inset 0 0 0 1px var(--oli-line);
+  color: var(--oli-ink);
+}
+
+.card.project--oli:hover {
+  background: var(--oli-bg);
+}
+
+.project--oli .visual {
+  background: var(--oli-sage);
+  border-color: var(--oli-line);
+}
+
+.project--oli .visual__note {
+  color: #5b6150;
+  opacity: 1;
+}
+
+.project--oli h3 {
+  color: var(--oli-ink);
+}
+
+.project--oli .project__body p {
+  color: var(--oli-muted);
+}
+
+.project--oli .project__collab a {
+  color: var(--oli-lime);
+}
+
+.project--oli .checklist li {
+  color: var(--oli-ink);
+}
+
+.project--oli .checklist li::before {
+  border-color: var(--oli-lime);
+}
+
+.project--oli .chip {
+  background: var(--oli-soft);
+  color: var(--oli-ink);
+  box-shadow: inset 0 0 0 1px var(--oli-line);
+}
+
+.project--oli .chip:hover {
+  background: var(--oli-soft);
+  box-shadow: inset 0 0 0 1px var(--oli-lime);
+}
+
+.project--oli .chip .tech-icon {
+  color: var(--oli-lime);
+}
+
+.project--oli .badge {
+  background: var(--oli-paper);
+  color: var(--oli-ink);
+  box-shadow: inset 0 0 0 1px var(--oli-line);
+  gap: 10px;
+  padding: 0 14px 0 12px;
+}
+
+/* sello de finalista: lima sólido, el color de acción de Oli */
+.finalist {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 14px 0 11px;
+  border-radius: var(--radius-pill);
+  background: #e4f222;
+  color: #20251d;
+  font-size: 13px;
+  font-weight: 560;
+}
+
+.badge__logo {
+  display: block;
+  height: 18px;
+  width: auto;
+}
+
+/* botón principal de Oli: lima con texto oliva oscuro */
+.btn--lime {
+  background: #e4f222;
+  color: #20251d;
+  border: 0;
+}
+
+.btn--lime:hover {
+  background: #eef75a;
+}
+
 .oli-diagram {
   position: relative;
   width: 100%;
@@ -2478,7 +2633,7 @@ main {
   position: absolute;
   left: 50.36%;
   top: 50%;
-  width: 36%;
+  width: 44%;
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
 }
@@ -2486,13 +2641,6 @@ main {
 .oli-diagram__sphere canvas {
   position: relative;
   width: 100% !important;
-}
-
-.oli-diagram__halo {
-  position: absolute;
-  inset: -22%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(82, 102, 235, 0.42) 0%, rgba(82, 102, 235, 0.12) 42%, transparent 68%);
 }
 
 .visual__note {
@@ -2568,6 +2716,17 @@ main {
     min-height: 44px;
   }
 }
+/* El satélite pasa rasante al limbo, justo bajo las cifras del hero: se les deja sitio subiendo el contenido */
+@media (min-width: 961px) {
+  .hero {
+    padding-bottom: 215px;
+  }
+
+  .hero__stats {
+    margin-top: 52px;
+  }
+}
+
 /* ───────── Responsive ───────── */
 @media (max-width: 1460px) {
   .altimeter {
@@ -2719,7 +2878,12 @@ main {
   }
 
   .footer__inner {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto 1fr;
+    gap: 16px 20px;
+  }
+
+  .footer__photo {
+    width: 88px;
   }
 
   .landscape {
@@ -2767,6 +2931,14 @@ main {
 
   .hero__stats strong {
     font-size: 32px;
+  }
+
+  /* en móvil las cifras quedan sobre la Tierra: panel oscuro translúcido */
+  .hero__stats {
+    padding: 4px 16px;
+    border-radius: 14px;
+    background: rgba(6, 9, 24, 0.66);
+    border-top: 0;
   }
 
   .timeline {
@@ -2834,22 +3006,25 @@ main {
 @media (prefers-reduced-motion: reduce) {
   .scroll-hint__line {
     animation: none;
-  }[data-reveal],
-.intro,
-.split-char {
+  }
+
+  [data-reveal],
+  .intro,
+  .split-char {
     opacity: 1 !important;
     transform: none !important;
     filter: none !important;
     transition: none !important;
     animation: none !important;
   }
+
   .scroll-hint.intro {
     transform: translateX(-50%) !important;
-  }.sky__flash,
-.hero__glow,
-.marquee__track {
-    animation: none !important;
   }
+
+  .sky__flash,
+  .hero__glow,
+  .marquee__track,
   .sky__flash {
     display: none;
   }

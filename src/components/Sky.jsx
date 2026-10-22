@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { createClouds, initialQuality } from './clouds.js';
+import { createSatellite } from './satellite3d.js';
+import { createEarth } from './earth.js';
 import { useLang } from '../i18n.jsx';
 
 /*
@@ -72,6 +74,9 @@ export default function Sky() {
   const starsRef = useRef(null);
   const cloudsRef = useRef(null);
   const planetRef = useRef(null);
+  const satRef = useRef(null);
+  const satCanvasRef = useRef(null);
+  const earthRef = useRef(null);
   const altRef = useRef(null);
   const layerRef = useRef(null);
   const barRef = useRef(null);
@@ -90,7 +95,39 @@ export default function Sky() {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const canvas = starsRef.current;
     const ctx = canvas.getContext('2d');
-    const clouds = createClouds(cloudsRef.current, initialQuality());
+    // Compilar shaders WebGL bloquea el hilo principal varios cuadros: se hace DESPUÉS de la animación de
+    // entrada (estrellas, destello y nombre), cada cosa en su propia tarea. Las nubes solo se ven al
+    // descender, así que si alguien hace scroll antes, se crean en ese momento.
+    let clouds = null;
+    let sat3d = null;
+    let cloudsTried = false;
+    let satTried = false;
+    const idle = (fn) => (window.requestIdleCallback ? window.requestIdleCallback(fn, { timeout: 900 }) : setTimeout(fn, 0));
+    const bootClouds = () => {
+      if (cloudsTried) return;
+      cloudsTried = true;
+      clouds = createClouds(cloudsRef.current, initialQuality());
+      clouds?.resize();
+      lastP = -1;
+    };
+    const bootSat = () => {
+      if (satTried || !satCanvasRef.current) return;
+      satTried = true;
+      sat3d = createSatellite(satCanvasRef.current);
+    };
+    let earth = null;
+    let earthTried = false;
+    const bootEarth = () => {
+      if (earthTried || !earthRef.current) return;
+      earthTried = true;
+      createEarth(earthRef.current, '', initialQuality() ? 0.5 : 0.7).then((e) => {
+        if (!e) return;
+        earth = e;
+        planetRef.current?.classList.add('is-textured');
+        lastP = -1;
+      });
+    };
+    const bootTimers = [setTimeout(() => idle(bootSat), 2800), setTimeout(() => idle(bootClouds), 3600), setTimeout(() => idle(bootEarth), 1600)];
     // Calidad adaptativa: si mientras se hace scroll el ritmo de frames cae por debajo de ~38 fps de forma
     // sostenida, el shader baja de nivel (menos resolución y octavas). Nunca sube de nuevo, para no oscilar.
     let lastNow = 0;
@@ -118,6 +155,7 @@ export default function Sky() {
       canvas.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       clouds?.resize();
+      earth?.resize();
       const r = rng(7);
       const count = Math.round((w * h) / 2200);
       stars = Array.from({ length: count }, () => {
@@ -205,11 +243,79 @@ export default function Sky() {
       ctx.globalAlpha = 1;
     };
 
+    // Satélite: cruza el cielo sobre el limbo de la Tierra. Su posición sale de la misma geometría que el
+    // planeta (centro y radio según el scroll), así lo acompaña al acercarse y se oculta de verdad tras el
+    // horizonte: va debajo del planeta en el orden de capas, que es opaco.
+    const SAT_PASS = 34; // segundos que tarda en cruzar
+    const SAT_CYCLE = 52; // pasada + tiempo oculto tras la Tierra
+    let satHidden = false;
+    const placeSatellite = (now, p) => {
+      const sat = satRef.current;
+      if (!sat || !sat3d) return;
+      const e = smooth(0, 0.32, p);
+      const fade = 1 - smooth(0.24, 0.4, p);
+      const tt = reduce ? SAT_PASS * 0.5 : (now / 1000 + 7) % SAT_CYCLE;
+      if (fade <= 0.01 || tt > SAT_PASS) {
+        if (!satHidden) sat.style.visibility = 'hidden';
+        satHidden = true;
+        return;
+      }
+      satHidden = false;
+      const k = lerp(1, 2.6, e);
+      const R = (k * 2.6 * Math.max(w, h)) / 2;
+      const cx = w / 2;
+      const cy = 0.84 * h + (lerp(0, -62, e) * h) / 100 + R;
+      const near = Math.min(Math.sqrt(k), 1.55);
+      const pos = (u) => {
+        const s = (u - 0.5) * 0.96 * w;
+        const th = Math.asin(clamp(s / R, -0.99, 0.99));
+        // sube desde detrás del horizonte, alcanza su altura máxima a mitad de pasada y vuelve a ocultarse
+        const alt = (-62 + 128 * Math.pow(Math.sin(Math.PI * u), 0.6)) * near;
+        return [cx + (R + alt) * Math.sin(th), cy - (R + alt) * Math.cos(th), th];
+      };
+      const u = tt / SAT_PASS;
+      const [x, y, th] = pos(u);
+      const [x2, y2] = pos(Math.min(1, u + 0.01));
+      const heading = Math.atan2(y2 - y, x2 - x);
+      const size = (0.3 + 0.13 * Math.sin(Math.PI * u)) * near;
+
+      // Iluminación coherente con la escena: el sol sale por el resplandor del horizonte y la Tierra
+      // devuelve luz azul desde su centro. x a la derecha, y arriba, z hacia la cámara.
+      const gx = w / 2;
+      const gy = 0.84 * h + (lerp(0, -62, e) * h) / 100;
+      const gl2 = Math.hypot(gx - x, gy - y) || 1;
+      const el2 = Math.hypot(cx - x, cy - y) || 1;
+      sat3d?.render({
+        t: reduce ? 3 : now / 1000,
+        heading: heading * 0.45 + th * 0.2,
+        sun: [((gx - x) / gl2) * 0.7, (-(gy - y) / gl2) * 0.45 + 0.4, 0.75],
+        earth: [(cx - x) / el2, -(cy - y) / el2, 0.2],
+        power: 2.7,
+      });
+
+      sat.style.visibility = 'visible';
+      sat.style.opacity = String(fade);
+      sat.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) scale(${size.toFixed(3)})`;
+    };
+
     const frame = (now) => {
       raf = requestAnimationFrame(frame);
       frameCount++;
       const p = clamp(window.scrollY / max);
       const moved = Math.abs(p - lastP) > 0.00005;
+      if (p > 0.03 && !cloudsTried) bootClouds();
+      if (earth && p < 0.42 && (moved || frameCount % 5 === 0)) {
+        const ee = smooth(0, 0.32, p);
+        const kk = lerp(1, 2.6, ee);
+        const R = 1.3 * Math.max(w, h) * kk;
+        const top = 0.84 * h + (lerp(0, -62, ee) * h) / 100;
+        earth.render({ cx: w / 2, cy: top + R, R }, reduce ? 0 : now / 1000);
+      }
+      if (p < 0.45 && (!reduce || moved)) placeSatellite(now, p);
+      else if (!satHidden && satRef.current) {
+        satRef.current.style.visibility = 'hidden';
+        satHidden = true;
+      }
 
       // Estrellas: solo mientras son visibles
       const starAlpha = 1 - smooth(0.18, 0.46, p);
@@ -231,7 +337,7 @@ export default function Sky() {
       }
       if (clouds && cloudsVisible && (moved || (!reduce && frameCount % 2 === 0))) {
         const fog = 0.42 * Math.exp(-Math.pow((p - 0.6) / 0.03, 2));
-        clouds.render(p, reduce ? 0 : now / 1000, sample(CLOUD_LIGHT, p), sample(CLOUD_SHADOW, p), fog);
+        clouds.render(p, reduce ? 0 : now / 1000, sample(CLOUD_LIGHT, p), sample(CLOUD_SHADOW, p), fog, sample(SKY_STOPS, p)[2]);
       }
 
       if (!moved) return;
@@ -251,6 +357,10 @@ export default function Sky() {
       planet.visibility = planetOpacity > 0 ? 'visible' : 'hidden';
       planet.transform = `translate3d(-50%, ${lerp(0, -62, e)}vh, 0) scale(${lerp(1, 2.6, e)})`;
       planet.opacity = String(planetOpacity);
+      if (earthRef.current) {
+        earthRef.current.style.visibility = planetOpacity > 0 ? 'visible' : 'hidden';
+        earthRef.current.style.opacity = String(planetOpacity);
+      }
       cloudsRef.current.style.opacity = String(smooth(0.08, 0.2, p));
 
       // Indicador de altitud (420 km ≈ órbita baja → 0 m)
@@ -275,6 +385,7 @@ export default function Sky() {
     raf = requestAnimationFrame(frame);
     return () => {
       cancelAnimationFrame(raf);
+      bootTimers.forEach(clearTimeout);
       cancelAnimationFrame(resizeRaf);
       ro.disconnect();
       window.removeEventListener('resize', onResize);
@@ -285,7 +396,13 @@ export default function Sky() {
     <>
       <div className="sky" ref={skyRef} aria-hidden="true">
         <canvas className="sky__stars" ref={starsRef} />
+        {/* va antes que el planeta: al pasar por detrás del limbo queda oculto por su disco */}
+        <div className="sky__sat" ref={satRef}>
+          <canvas ref={satCanvasRef} />
+        </div>
         <div className="sky__planet" ref={planetRef} />
+        {/* la Tierra texturizada se dibuja encima del disco CSS (que queda como halo y como respaldo) */}
+        <canvas className="sky__earth" ref={earthRef} />
         <canvas className="sky__clouds" ref={cloudsRef} />
         <div className="sky__flash" />
       </div>

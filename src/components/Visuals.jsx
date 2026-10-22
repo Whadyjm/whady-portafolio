@@ -115,7 +115,15 @@ function oliStateAt(t) {
 function Oli() {
   const { c } = useLang();
   const svgRef = useRef(null);
+  const boxRef = useRef(null);
   const [state, setState] = useState('listening');
+  // 1800 partículas y su primer cuadro no deben competir con la animación de entrada: se montan al acercarse
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setNear(true); io.disconnect(); } }, { rootMargin: '400px' });
+    io.observe(boxRef.current);
+    return () => io.disconnect();
+  }, []);
   useEffect(() => {
     const t0 = performance.now();
     const id = setInterval(() => {
@@ -128,56 +136,62 @@ function Oli() {
     }, 100);
     return () => clearInterval(id);
   }, []);
+  // colores de estado de Oli: aprobado (lima), revisión humana (ámbar), bloqueo (rosa)
   const outcomes = [
-    { label: 'APPROVE', note: c.visuals.withinRules, y: 50 },
-    { label: 'ESCALATE', note: c.visuals.needsApproval, y: 110 },
-    { label: 'BLOCK', note: c.visuals.duplicate, y: 170 },
+    { label: 'APPROVE', note: c.visuals.withinRules, y: 50, fill: '#e4f222' },
+    { label: 'ESCALATE', note: c.visuals.needsApproval, y: 110, fill: '#f3d58f' },
+    { label: 'BLOCK', note: c.visuals.duplicate, y: 170, fill: '#f4b4b9' },
   ];
+  const INK = '#20251d';
+  const MUTED = '#5b6150';
+  const HAIR = 'rgba(32,37,29,0.16)';
   return (
-    <div className="oli-diagram">
-    <svg ref={svgRef} viewBox="0 0 560 220">
-      {/* factura */}
-      <g transform="translate(34 46)">
-        <rect width="104" height="128" rx="10" fill="rgba(39,39,53,0.95)" stroke={LINE} />
-        <path d="M78 0 v22 h26" fill="none" stroke={LINE} />
-        <text x="14" y="30" fill={SOFT} fontSize="10" fontFamily="Inter, sans-serif">{c.visuals.invoice}</text>
-        {[48, 60, 72].map((y, i) => (
-          <rect key={y} x="14" y={y} width={[70, 54, 62][i]} height="5" rx="2.5" fill={LINE} />
-        ))}
-        <text x="14" y="108" fill="#ededf3" fontSize="15" fontFamily="Inter, sans-serif">$240.00</text>
-      </g>
-      <path id="oliIn" d="M140 110 C190 110 200 110 242 110" stroke={LINE} strokeDasharray="3 5" fill="none" />
-      <circle r="4" fill={ACC}>
-        <animateMotion dur="3s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.4;1" calcMode="linear">
-          <mpath href="#oliIn" />
-        </animateMotion>
-      </circle>
-
-      {/* decisiones */}
-      {outcomes.map((o, k) => (
-        <g key={o.label}>
-          <path id={`oliOut${k}`} d={`M336 110 C370 110 370 ${o.y} 404 ${o.y}`} stroke={LINE} strokeDasharray="3 5" fill="none" />
-          <circle r="4" fill={ACC} opacity="0">
-            <animateMotion dur="9s" begin={`${k * 3}s`} repeatCount="indefinite" keyPoints="0;0;1;1" keyTimes="0;0.13;0.25;1" calcMode="linear">
-              <mpath href={`#oliOut${k}`} />
-            </animateMotion>
-            <animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;0.13;0.25;0.26;1" dur="9s" begin={`${k * 3}s`} repeatCount="indefinite" />
-          </circle>
-          <g transform={`translate(406 ${o.y - 18})`}>
-            <rect width="128" height="36" rx="18" fill="rgba(39,39,53,0.95)" stroke={LINE} />
-            <rect width="128" height="36" rx="18" fill="rgba(82,102,235,0.4)" stroke={ACC} opacity="0">
-              <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.24;0.27;0.32;0.36;1" dur="9s" begin={`${k * 3}s`} repeatCount="indefinite" />
-            </rect>
-            <text x="16" y="15" fill="#ededf3" fontSize="10.5" fontWeight="600" fontFamily="Inter, sans-serif" letterSpacing="1">{o.label}</text>
-            <text x="16" y="28" fill={SOFT} fontSize="8.5" fontFamily="Inter, sans-serif">{o.note}</text>
-          </g>
+    <div className="oli-diagram" ref={boxRef}>
+      <svg ref={svgRef} viewBox="0 0 560 220">
+        {/* órbitas suaves, como en la landing de Oli */}
+        <circle cx="282" cy="110" r="100" fill="none" stroke={HAIR} strokeWidth="1" />
+        <circle cx="282" cy="110" r="128" fill="none" stroke="rgba(32,37,29,0.08)" strokeWidth="1" />
+        {/* factura */}
+        <g transform="translate(34 46)">
+          <rect width="104" height="128" rx="10" fill="#ffffff" stroke={HAIR} />
+          <path d="M78 0 v22 h26" fill="none" stroke={HAIR} />
+          <text x="14" y="30" fill={MUTED} fontSize="10" fontFamily="Inter, sans-serif">{c.visuals.invoice}</text>
+          {[48, 60, 72].map((y, i) => (
+            <rect key={y} x="14" y={y} width={[70, 54, 62][i]} height="5" rx="2.5" fill="rgba(32,37,29,0.12)" />
+          ))}
+          <text x="14" y="108" fill={INK} fontSize="15" fontFamily="Inter, sans-serif">$240.00</text>
         </g>
-      ))}
-    </svg>
-    <div className="oli-diagram__sphere" data-state={state}>
-      <span className="oli-diagram__halo" aria-hidden="true" />
-      <OliMascot state={state} size={400} particles={1500} label={c.visuals.oliLabel} />
-    </div>
+        <path id="oliIn" d="M140 110 C190 110 200 110 242 110" stroke="rgba(32,37,29,0.35)" strokeDasharray="3 5" fill="none" />
+        <circle r="4.5" fill="#e4f222" stroke={INK} strokeWidth="1">
+          <animateMotion dur="3s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.4;1" calcMode="linear">
+            <mpath href="#oliIn" />
+          </animateMotion>
+        </circle>
+
+        {/* decisiones */}
+        {outcomes.map((o, k) => (
+          <g key={o.label}>
+            <path id={`oliOut${k}`} d={`M336 110 C370 110 370 ${o.y} 404 ${o.y}`} stroke="rgba(32,37,29,0.35)" strokeDasharray="3 5" fill="none" />
+            <circle r="4.5" fill={o.fill} stroke={INK} strokeWidth="1" opacity="0">
+              <animateMotion dur="9s" begin={`${k * 3}s`} repeatCount="indefinite" keyPoints="0;0;1;1" keyTimes="0;0.13;0.25;1" calcMode="linear">
+                <mpath href={`#oliOut${k}`} />
+              </animateMotion>
+              <animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;0.13;0.25;0.26;1" dur="9s" begin={`${k * 3}s`} repeatCount="indefinite" />
+            </circle>
+            <g transform={`translate(406 ${o.y - 18})`}>
+              <rect width="128" height="36" rx="18" fill="#ffffff" stroke={HAIR} />
+              <rect width="128" height="36" rx="18" fill={o.fill} stroke={INK} strokeOpacity="0.35" opacity="0">
+                <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.24;0.27;0.32;0.36;1" dur="9s" begin={`${k * 3}s`} repeatCount="indefinite" />
+              </rect>
+              <text x="16" y="15" fill={INK} fontSize="10.5" fontWeight="600" fontFamily="Inter, sans-serif" letterSpacing="1">{o.label}</text>
+              <text x="16" y="28" fill={MUTED} fontSize="8.5" fontFamily="Inter, sans-serif">{o.note}</text>
+            </g>
+          </g>
+        ))}
+      </svg>
+      <div className="oli-diagram__sphere" data-state={state}>
+        {near && <OliMascot state={state} dark={false} size={400} particles={1800} label={c.visuals.oliLabel} />}
+      </div>
     </div>
   );
 }
